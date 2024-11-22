@@ -1,7 +1,7 @@
 # drawingguessgame
 Drawing guess game 
 Het project gaat drawing guess game, de keuze was gemaakt na het spelen van scribble.
-Gebruikt van: websockets, node.js, html, css, database
+Wij gebruiken: websockets, node.js, html, css, database
 
 Chatgpt queries: 
 “web game multiplayer ideas easy to code” 
