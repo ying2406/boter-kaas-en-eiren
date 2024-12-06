@@ -1,64 +1,108 @@
-// Elementen selecteren
-const playerForm = document.getElementById("player-form");
-const player1Input = document.getElementById("player1-name");
-const player2Input = document.getElementById("player2-name");
-const startGameButton = document.getElementById("start-game");
-const gameContainer = document.getElementById("game-container");
-const cells = document.querySelectorAll(".cell");
-const statusText = document.getElementById("status");
-const resetButton = document.getElementById("reset");
-const scorePlayer1 = document.getElementById("score-player1");
-const scorePlayer2 = document.getElementById("score-player2");
+const offlineModeButton = document.getElementById("offline-mode");
+const onlineModeButton = document.getElementById("online-mode");
+const modeSelection = document.getElementById("mode-selection");
 
-let currentPlayer = "X";
-let board = ["", "", "", "", "", "", "", "", ""];
-let isGameActive = true;
-let player1Score = 0;
-let player2Score = 0;
-let player1Name = "Speler 1";
-let player2Name = "Speler 2";
+let isOnlineMode = false; // Flag to check if the game is online or offline
 
-const winningConditions = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-];
+// Toggle between offline and online mode
+offlineModeButton.addEventListener("click", () => {
+    isOnlineMode = false;
+    startGame();
+});
 
-// Functie om namen in te stellen en het spel te starten
-startGameButton.addEventListener("click", () => {
+onlineModeButton.addEventListener("click", () => {
+    isOnlineMode = true;
+    startGame();
+});
+
+// Function to start the game after selecting a mode
+function startGame() {
     player1Name = player1Input.value || "Speler 1";
     player2Name = player2Input.value || "Speler 2";
 
     scorePlayer1.textContent = `${player1Name} (X): ${player1Score}`;
     scorePlayer2.textContent = `${player2Name} (O): ${player2Score}`;
 
+    modeSelection.classList.add("hidden");
     playerForm.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     statusText.textContent = `${player1Name} (X) is aan de beurt.`;
-});
 
-function handleCellClick(event) {
-    const cell = event.target;
-    const index = cell.getAttribute("data-index");
+    if (isOnlineMode) {
+        initializeOnlineGame();  // Initialize multiplayer logic
+    } else {
+        initializeOfflineGame(); // Initialize offline gameplay
+    }
+}
 
-    if (board[index] !== "" || !isGameActive) return;
+// Offline Game Logic
+function initializeOfflineGame() {
+    currentPlayer = "X";
+    board = ["", "", "", "", "", "", "", "", ""];
+    isGameActive = true;
+    cells.forEach(cell => cell.addEventListener("click", handleCellClick));
+}
 
-    board[index] = currentPlayer;
-    cell.textContent = currentPlayer;
-    cell.classList.add("taken");
+// Multiplayer Game Logic (with Socket.IO)
+function initializeOnlineGame() {
+    const socket = io();
+    let player = null;
+    let board = [];
+    let currentPlayer = "X";
 
-    if (checkWin()) {
-        if (currentPlayer === "X") {
-            player1Score++;
-            scorePlayer1.textContent = `${player1Name} (X): ${player1Score}`;
-        } else {
-            player2Score++;
-            scorePlayer2.textContent = `${player2Name} (O): ${player2Score}`;
+    function renderBoard() {
+        cells.forEach((cell, index) => {
+            cell.textContent = board[index];
+            cell.className = "cell " + (board[index] ? "taken" : "");
+        });
+    }
+
+    function handleCellClick(event) {
+        const index = event.target.getAttribute("data-index");
+        if (player && board[index] === "" && currentPlayer === player) {
+            socket.emit("make-move", { index });
         }
-        statusText.textContent = `Gefeliciteerd! ${currentPlayer === "X" ? player1Name : player2Name} heeft gewonnen!`;
-        isGameActive = false;
+    }
+
+    cells.forEach(cell => cell.addEventListener("click", handleCellClick));
+
+    socket.on("player-assigned", (data) => {
+        player = data.player;
+        board = data.board;
+        statusText.textContent = `Je bent speler ${player}. Wacht op de andere speler...`;
+        renderBoard();
+    });
+
+    socket.on("game-started", () => {
+        statusText.textContent = `Het spel is begonnen! Speler X begint.`;
+    });
+
+    socket.on("move-made", (data) => {
+        board = data.board;
+        currentPlayer = data.currentPlayer;
+        renderBoard();
+        statusText.textContent = `Het is de beurt van speler ${currentPlayer}.`;
+    });
+
+    socket.on("player-disconnected", () => {
+        statusText.textContent = "Een speler heeft de verbinding verbroken. Wacht op een nieuwe speler...";
+        board = ["", "", "", "", "", "", "", "", ""];
+        renderBoard();
+    });
+
+    socket.on("game-full", () => {
+        statusText.textContent = "Het spel is vol. Probeer later opnieuw.";
+    });
+}
+
+resetButton.addEventListener("click", () => {
+    if (isOnlineMode) {
+        // Implement multiplayer reset logic here
+    } else {
+        board = ["", "", "", "", "", "", "", "", ""];
+        currentPlayer = "X";
+        isGameActive = true;
+        cells.forEach(cell => cell.textContent = "");
+        statusText.textContent = `${player1Name} (X) is aan de beurt.`;
+    }
+});
