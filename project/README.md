@@ -1,4 +1,4 @@
-# tictactoe game
+# boter kaas en eiren game
 Het project gaat tictactoe worden met een twist.
 
 Wij gebruiken: html, css, py
@@ -14,6 +14,3 @@ Eisen:
 5.	kruisje of rondje die op t scherm zichtbaar wordt
 6.	Chat om te raden
 7.	Scoreboard
-
-
-
