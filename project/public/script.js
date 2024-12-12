@@ -1,154 +1,124 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const offlineModeButton = document.getElementById("offline-mode");
-    const onlineModeButton = document.getElementById("online-mode");
-    const modeSelection = document.getElementById("mode-selection");
+    document.addEventListener("DOMContentLoaded", () => {
+    const modeButtons = document.querySelectorAll("#offline-mode, #online-mode");
     const startGameButton = document.getElementById("start-game");
     const resetButton = document.getElementById("reset");
-
+    const cells = document.querySelectorAll(".cell");
+    const statusText = document.getElementById("status");
     let isOnlineMode = false;
     let currentPlayer = "X";
-    let board = ["", "", "", "", "", "", "", "", ""];
+    let board = Array(9).fill("");
     let isGameActive = true;
-    let player1Name = "Speler 1";
-    let player2Name = "Speler 2";
-    let socket = io();  // Maak verbinding met de server via WebSockets
+    let playerNames = { X: "Speler 1", O: "Speler 2" };
 
-    socket.on('connect', () => {
-        console.log('Verbonden met de server via socket');
-    });
+    let socket = null;
+
+    try {
+        socket = io("http://localhost:5500");
+        socket.on("connect_error", (err) => console.error("Socket connection error:", err.message));
+    } catch (error) {
+        console.error("Failed to initialize Socket.IO:", error.message);
+        socket = null;
+    }
 
     startGameButton.addEventListener("click", () => {
-        const player1Input = document.getElementById("player1-name");
-        const player2Input = document.getElementById("player2-name");
-
-        player1Name = player1Input.value || "Speler 1";
-        player2Name = player2Input.value || "Speler 2";
-
-        modeSelection.classList.remove("hidden");
-        document.getElementById("player-form").classList.add("hidden");
+        playerNames.X = document.getElementById("player1-name").value || "Speler 1";
+        playerNames.O = document.getElementById("player2-name").value || "Speler 2";
+        toggleVisibility("#player-form", false);
+        toggleVisibility("#mode-selection", true);
     });
 
-    offlineModeButton.addEventListener("click", () => {
-        isOnlineMode = false;
-        startGame();
+    modeButtons.forEach((button) =>
+        button.addEventListener("click", () => {
+            isOnlineMode = button.id === "online-mode";
+            startGame();
+        })
+    );
+
+    resetButton.addEventListener("click", () => {
+        if (isOnlineMode && socket) socket.emit("reset-game");
+        else resetGame();
     });
 
-    onlineModeButton.addEventListener("click", () => {
-        isOnlineMode = true;
-        startGame();
-    });
+    const startGame = () => {
+        updateScore();
+        toggleVisibility("#game-container", true);
+        toggleVisibility("#mode-selection", false);
+        resetGame();
+        if (isOnlineMode && socket) initializeOnlineMode();
+    };
 
-    function startGame() {
-        const scorePlayer1 = document.getElementById("score-player1");
-        const scorePlayer2 = document.getElementById("score-player2");
-        const gameContainer = document.getElementById("game-container");
-        const statusText = document.getElementById("status");
-
-        scorePlayer1.textContent = `${player1Name} (X): 0`;
-        scorePlayer2.textContent = `${player2Name} (O): 0`;
-
-        gameContainer.classList.remove("hidden");
-        modeSelection.classList.add("hidden");
-
-        statusText.textContent = `${player1Name} (X) is aan de beurt.`;
-
-        if (isOnlineMode) {
-            initializeOnlineGame();
-        } else {
-            initializeOfflineGame();
-        }
-    }
-
-    function initializeOfflineGame() {
-        const cells = document.querySelectorAll(".cell");
-        currentPlayer = "X";
-        board = ["", "", "", "", "", "", "", "", ""];
+    const resetGame = () => {
+        board.fill("");
         isGameActive = true;
-
-        cells.forEach((cell, index) => {
+        cells.forEach((cell, idx) => {
             cell.textContent = "";
-            cell.className = "cell";
-            cell.addEventListener("click", () => handleCellClick(index, cell));
+            cell.onclick = () => handleCellClick(idx);
         });
-    }
+    };
 
-    function handleCellClick(index, cell) {
-        if (!isGameActive || board[index] !== "") return;
-
+    const handleCellClick = (index) => {
+        if (!isGameActive || board[index]) return;
         board[index] = currentPlayer;
-        cell.textContent = currentPlayer;
+        cells[index].textContent = currentPlayer;
 
-        if (checkWinner()) {
-            document.getElementById("status").textContent = `Speler ${currentPlayer} wint!`;
-            isGameActive = false;
-            return;
-        }
+        if (checkWinner()) endGame(`${playerNames[currentPlayer]} wint!`);
+        else if (board.every(Boolean)) endGame("Gelijkspel!");
+        else switchPlayer();
+    };
 
-        if (board.every(cell => cell !== "")) {
-            document.getElementById("status").textContent = "Gelijkspel!";
-            isGameActive = false;
-            return;
-        }
+    const endGame = (message) => {
+        isGameActive = false;
+        statusText.textContent = message;
+    };
 
+    const switchPlayer = () => {
         currentPlayer = currentPlayer === "X" ? "O" : "X";
-        document.getElementById("status").textContent = `Het is de beurt van speler ${currentPlayer}.`;
-    }
+        statusText.textContent = `Het is de beurt van ${playerNames[currentPlayer]}.`;
+    };
 
-    function checkWinner() {
-        const winPatterns = [
+    const checkWinner = () => {
+        const patterns = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
             [0, 3, 6], [1, 4, 7], [2, 5, 8],
             [0, 4, 8], [2, 4, 6]
         ];
-
-        return winPatterns.some(pattern => 
-            pattern.every(index => board[index] === currentPlayer)
+        return patterns.some((pattern) =>
+            pattern.every((idx) => board[idx] === currentPlayer)
         );
-    }
+    };
 
-    socket.on('game-started', () => {
-        console.log("Het spel is gestart!");
-    });
-
-    socket.on('move-made', (data) => {
-        board = data.board;
-        currentPlayer = data.currentPlayer;
-        updateBoard();
-    });
-
-    socket.on('game-over', (data) => {
-        if (data.winner) {
-            document.getElementById("status").textContent = `Speler ${data.winner} wint!`;
-        } else {
-            document.getElementById("status").textContent = "Gelijkspel!";
+    const initializeOnlineMode = () => {
+        if (!socket) {
+            console.error("Socket.IO is not initialized. Online mode cannot be started.");
+            return;
         }
-        isGameActive = false;
-    });
 
-    socket.on('game-reset', (data) => {
-        board = data.board;
-        currentPlayer = data.currentPlayer;
-        updateBoard();
-        document.getElementById("status").textContent = `Het is de beurt van speler ${currentPlayer}.`;
-    });
-
-    socket.on('update-score', (score) => {
-        document.getElementById("score-player1").textContent = `${player1Name} (X): ${score.player1Score}`;
-        document.getElementById("score-player2").textContent = `${player2Name} (O): ${score.player2Score}`;
-    });
-
-    function updateBoard() {
-        const cells = document.querySelectorAll(".cell");
-        cells.forEach((cell, index) => {
-            cell.textContent = board[index];
+        socket.on("move-made", ({ board: newBoard, currentPlayer: nextPlayer }) => {
+            board = newBoard;
+            currentPlayer = nextPlayer;
+            updateBoard();
         });
-    }
 
-    resetButton.addEventListener("click", () => {
-        if (isOnlineMode) {
-            socket.emit('reset-game');
-        } else {
-            initializeOfflineGame();
-        }
-    });
+        socket.on("game-over", ({ winner }) => {
+            if (winner) endGame(`${playerNames[winner]} wint!`);
+            else endGame("Gelijkspel!");
+        });
+
+        socket.on("game-reset", resetGame);
+    };
+
+    const updateScore = () => {
+        document.getElementById("score-player1").textContent = `${playerNames.X} (X): 0`;
+        document.getElementById("score-player2").textContent = `${playerNames.O} (O): 0`;
+    };
+
+    const updateBoard = () => {
+        cells.forEach((cell, idx) => {
+            cell.textContent = board[idx];
+        });
+    };
+
+    const toggleVisibility = (selector, show) => {
+        document.querySelector(selector).classList.toggle("hidden", !show);
+    };
 });
