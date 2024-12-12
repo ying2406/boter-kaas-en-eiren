@@ -1,21 +1,19 @@
-# drawingguessgame
-Drawing guess game 
-Het project gaat drawing guess game, de keuze was gemaakt na het spelen van scribble.
-Wij gebruiken: websockets, node.js, html, css, database
+# tictactoe game
+Het project gaat tictactoe worden met een twist.
+
+Wij gebruiken: html, css, py
 
 Chatgpt queries: 
 “web game multiplayer ideas easy to code” 
 
-Wat is drawing game
-1.	Tijd gelimiteerd
-2.	Een woord die je krijgt om te tekenen
-3.	Een woord die je natekent 
-4.	Een canvas waarop je kan tekenen
-5.	Drawing tools en een gum
+Eisen:
+1.	multiplayer
+2.	online & offline playable
+3.	je moet interactie kunnen maken 
+4.	Een canvas voor de game
+5.	kruisje of rondje die op t scherm zichtbaar wordt
 6.	Chat om te raden
-7.	Correcte woord wordt groen + punten
-8.	Punten systeem
-9.	Scoreboard
+7.	Scoreboard
 
 
 
