@@ -1,4 +1,4 @@
-    document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     const modeButtons = document.querySelectorAll("#offline-mode, #online-mode");
     const startGameButton = document.getElementById("start-game");
     const resetButton = document.getElementById("reset");
@@ -8,7 +8,7 @@
     let currentPlayer = "X";
     let board = Array(9).fill("");
     let isGameActive = true;
-    let playerNames = { X: "Speler 1", O: "Speler 2" };
+    let playerNames = { X: "Speler 1", O: "Bot" };
 
     let socket = null;
 
@@ -22,7 +22,6 @@
 
     startGameButton.addEventListener("click", () => {
         playerNames.X = document.getElementById("player1-name").value || "Speler 1";
-        playerNames.O = document.getElementById("player2-name").value || "Speler 2";
         toggleVisibility("#player-form", false);
         toggleVisibility("#mode-selection", true);
     });
@@ -50,6 +49,7 @@
     const resetGame = () => {
         board.fill("");
         isGameActive = true;
+        currentPlayer = "X";
         cells.forEach((cell, idx) => {
             cell.textContent = "";
             cell.onclick = () => handleCellClick(idx);
@@ -66,14 +66,24 @@
         else switchPlayer();
     };
 
-    const endGame = (message) => {
-        isGameActive = false;
-        statusText.textContent = message;
-    };
-
     const switchPlayer = () => {
         currentPlayer = currentPlayer === "X" ? "O" : "X";
         statusText.textContent = `Het is de beurt van ${playerNames[currentPlayer]}.`;
+
+        if (currentPlayer === "O" && !isOnlineMode) {
+            setTimeout(botMove, 500);
+        }
+    };
+
+    const botMove = () => {
+        let availableMoves = board.map((val, idx) => (val === "" ? idx : null)).filter(val => val !== null);
+        let move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        board[move] = "O";
+        cells[move].textContent = "O";
+
+        if (checkWinner()) endGame(`${playerNames["O"]} wint!`);
+        else if (board.every(Boolean)) endGame("Gelijkspel!");
+        else switchPlayer();
     };
 
     const checkWinner = () => {
@@ -85,6 +95,11 @@
         return patterns.some((pattern) =>
             pattern.every((idx) => board[idx] === currentPlayer)
         );
+    };
+
+    const endGame = (message) => {
+        isGameActive = false;
+        statusText.textContent = message;
     };
 
     const initializeOnlineMode = () => {
