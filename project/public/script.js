@@ -8,7 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentPlayer = "X";
     let board = Array(9).fill("");
     let isGameActive = true;
-    let playerNames = { X: "Speler 1", O: "Bot" };
+    let playerNames = { X: "Speler 1", O: "Speler 2" };
+    let scores = { X: 0, O: 0 };
 
     let socket = null;
 
@@ -22,6 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     startGameButton.addEventListener("click", () => {
         playerNames.X = document.getElementById("player1-name").value || "Speler 1";
+        const player2NameInput = document.getElementById("player2-name").value;
+
+        if (isOnlineMode) {
+            playerNames.O = "Jett"; // In online-modus wordt de standaardnaam "Jett" gebruikt
+        } else {
+            playerNames.O = player2NameInput || "Speler 2"; // In offline-modus wordt de ingevoerde naam of "Bot" gebruikt
+        }
+
         toggleVisibility("#player-form", false);
         toggleVisibility("#mode-selection", true);
     });
@@ -50,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
         board.fill("");
         isGameActive = true;
         currentPlayer = "X";
+        statusText.textContent = `Het is de beurt van ${playerNames[currentPlayer]}.`;
         cells.forEach((cell, idx) => {
             cell.textContent = "";
             cell.onclick = () => handleCellClick(idx);
@@ -70,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPlayer = currentPlayer === "X" ? "O" : "X";
         statusText.textContent = `Het is de beurt van ${playerNames[currentPlayer]}.`;
 
-        if (currentPlayer === "O" && !isOnlineMode) {
+        if (currentPlayer === "O" && isOnlineMode) {
             setTimeout(botMove, 500);
         }
     };
@@ -100,6 +110,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const endGame = (message) => {
         isGameActive = false;
         statusText.textContent = message;
+
+        if (message.includes("wint")) {
+            scores[currentPlayer]++;
+            updateScore();
+        }
+    };
+
+    const updateScore = () => {
+        document.getElementById("score-player1").textContent = `${playerNames.X} (X): ${scores.X}`;
+        document.getElementById("score-player2").textContent = `${playerNames.O} (O): ${scores.O}`;
     };
 
     const initializeOnlineMode = () => {
@@ -120,11 +140,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         socket.on("game-reset", resetGame);
-    };
-
-    const updateScore = () => {
-        document.getElementById("score-player1").textContent = `${playerNames.X} (X): 0`;
-        document.getElementById("score-player2").textContent = `${playerNames.O} (O): 0`;
     };
 
     const updateBoard = () => {
