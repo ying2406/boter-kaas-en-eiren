@@ -26,10 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const player2NameInput = document.getElementById("player2-name").value;
 
         if (isOnlineMode) {
-            playerNames.O = "Jett"; // In online-modus wordt de standaardnaam "Jett" gebruikt
+            playerNames.O = "Jett"; 
             playerNames.O = "Jett"; 
         } else {
-            playerNames.O = player2NameInput || "Speler 2"; // In offline-modus wordt de ingevoerde naam of "Bot" gebruikt
+            playerNames.O = player2NameInput || "Speler 2"; 
             playerNames.O = player2NameInput || "Speler 2"; 
         }
 
