@@ -27,9 +27,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (isOnlineMode) {
             playerNames.O = "Jett"; // In online-modus wordt de standaardnaam "Jett" gebruikt
+            playerNames.O = "Jett"; 
         } else {
             playerNames.O = player2NameInput || "Speler 2"; // In offline-modus wordt de ingevoerde naam of "Bot" gebruikt
+            playerNames.O = player2NameInput || "Speler 2"; 
         }
+
+        updateScore();
 
         toggleVisibility("#player-form", false);
         toggleVisibility("#mode-selection", true);
